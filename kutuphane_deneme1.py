@@ -4,6 +4,8 @@ class katman:
     def __init__(self,agirliklar,biaslar):
         self.agirliklar=agirliklar
         self.biaslar=biaslar
+        self.deltalar=np.zeros((biaslar.shape))#okuldaki sigmoid hatasi dedigimiz deltalar cikti katmanindaki noronlar icin LossF'() * AktivasyonF'()
+        #gizli katmanlar icin (E S*w) * AktivasyonF'() = o norona etki eden sonraki katman noronlarinin deltasi * etki eden agirlik
 
 class nn:
     def __init__(self,katmanlardaki_noron_sayilari,aktivasyon_fonksiyonlari=None):
@@ -34,10 +36,14 @@ class nn:
     def _sigmoid(self,x):
         return 1/(1+np.exp(-x))
 
-    def _sigmoid_turev(self,x):
+    def _sigmoid_turev(self,x):#f_net=sigmoid(net),sigmoid'(net)=f_net*(1-f_net)
         return x*(1-x)
 
-    def _aktivasyon_fonk(self,ad,x):
+    def _aktivasyon_fonk_turev(self,x,ad='sigmoid'):
+        if ad=='sigmoid':
+            return self._sigmoid_turev(x)
+
+    def _aktivasyon_fonk(self,x,ad='sigmoid'):
         if ad=='sigmoid':
             return self._sigmoid(x)
 
@@ -61,7 +67,7 @@ class nn:
         for i in range(self._ara_katman_sayisi + 1):
             katm=self.katmanlar[i]
             net=np.dot(f_net,katm.agirliklar.T)+katm.biaslar
-            f_net = self._aktivasyon_fonk(self.aktivasyon_fonksiyonlari[i], net)
+            f_net = self._aktivasyon_fonk(net,self.aktivasyon_fonksiyonlari[i])
             f_netler_cache.append(f_net)
         return np.array(f_netler_cache)
 
@@ -72,11 +78,12 @@ class nn:
             katm = self.katmanlar[i]
             net = np.dot(f_net, katm.agirliklar) + katm.biaslar
             norona_gelenler=[]#toplanmamis hali
-            f_net = self._aktivasyon_fonk(self.aktivasyon_fonksiyonlari[i], net)
+            f_net = self._aktivasyon_fonk(net,self.aktivasyon_fonksiyonlari[i])
             f_netler_cache.append(f_net)
         return np.array(f_netler_cache)
 
-    def _sigmoid_fonk_ile_egitim(self,girdi,beklenen,epoch,batch_size=None,hata_fonksiyonu='mse',optimizer='sgd',ogrenme_katsayisi=0.1):
+    def _sigmoid_fonk_ile_egitim(self,girdi,beklenen,epoch,batch_size=None,hata_fonksiyonu='mse',optimizer={},ogrenme_katsayisi=0.1):
+        #ilk denememdi silinebilir
         #girdi boyutu nx... n=veri setinde kac tane ornek varsa ,...= 1 tane ornek=girdi[0]
         for tekrar in range(epoch):#epoch
             for i in range(girdi.shape[0]):#iterasyon
@@ -101,13 +108,42 @@ class nn:
 
                 #sondan onceki katmanlarin agirliklarinin guncellenmesi
                 #burada dEtotal/dw de farklilik var
-                
-
 
         return 1
 
-    def egitim(self,girdi,cikti,epoch,batch_size=None,hata_fonksiyonu='mse',optimizer='sgd',ogrenme_katsayisi=0.1):
-        self._sigmoid_fonk_ile_egitim(girdi,cikti,epoch,batch_size,hata_fonksiyonu,optimizer,ogrenme_katsayisi)
+    def _egitme(self,girdi,beklenen,epoch,batch_size=None,hata_fonksiyonu='mse',optimizer={},ogrenme_katsayisi=0.1):
+        #girdi boyutu nx... n=veri setinde kac tane ornek varsa ,...= 1 tane ornek=girdi[0]
+        for tekrar in range(epoch):#epoch
+            for i in range(girdi.shape[0]):#iterasyon
+                g = np.reshape(girdi[i], (1, girdi[0].shape[0]))#sgd kullaniliyor
+                c = np.reshape(beklenen[i], (1, beklenen[0].shape[0]))#sgd kullaniliyor
+                f_netler_cache = self.ileri_yayilim(g)
+
+                #cikti katmanindaki noronlarin deltalarini hesaplama
+                son_katman_hatalari=self._hata_fonksiyonu_turevi_tekli(f_netler_cache[-1],c)
+                aktivasyon_turevleri=self._aktivasyon_fonk_turev(f_netler_cache[-1],self.aktivasyon_fonksiyonlari[-1])
+                self.katmanlar[-1].deltalar=aktivasyon_turevleri*son_katman_hatalari
+
+                #gizli katman noronlarinin deltalarini hesaplama
+                for j in range(self._ara_katman_sayisi):
+                    #delta_zinciri o norona etki eden sonraki noronlarin deltalarinin agirliklara gore toplami
+                    delta_zinciri=np.dot(self.katmanlar[j+1].deltalar,self.katmanlar[j+1].agirliklar.T)
+                    self.katmanlar[j].deltalar=self._aktivasyon_fonk_turev(f_netler_cache[j+1])*delta_zinciri
+
+                #agirliklarin guncellenmesi
+                for j in range(self._ara_katman_sayisi+1):
+                    for t in range(self.katmanlar[j].agirliklar.shape[0]):
+                        #turev = agirliga gelen giris ya da girdi * delta
+                        turev=f_netler_cache[j]*self.katmanlar[j].deltalar
+                        self.katmanlar[j].agirliklar[t]-=np.array(ogrenme_katsayisi*turev).reshape((2,))                
+
+        return 1
+
+    def egitim(self,girdi,cikti,epoch,batch_size=None,hata_fonksiyonu='mse',optimizer={},ogrenme_katsayisi=0.1):
+        optimizer['ad']='sgd'
+        optimizer['momentum'] = 0        
+        #self._sigmoid_fonk_ile_egitim(girdi,cikti,epoch,batch_size,hata_fonksiyonu,optimizer,ogrenme_katsayisi)
+        self._egitme(girdi, cikti, epoch, batch_size, hata_fonksiyonu, optimizer, ogrenme_katsayisi)
 
 #ag=nn([2,2,1])
 #ag.katmanlar=np.array([katman(np.array([[0.129952,0.570345],[-0.923123,-0.328932]]),np.array([[0.341232,-0.115223]])),katman(np.array([[0.164732],[0.752621]]),np.array([[-0.993423]]))])
