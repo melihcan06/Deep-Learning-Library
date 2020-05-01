@@ -19,9 +19,9 @@ class nn:
         #katmanlardaki_noron_sayilari = [4,3,2] icin 4 giris,1 gizli katman vardir.3 noron gizli katman,2 noron da cikis katmaninda var demektir
         #hata kontrolleri daha sonra yapilacaktir katman sayisi ,0 ve altı girilemez vs...
         
-        #list of number of neurons in layers = [4,3,2] for 4 input,1 hidden layer.3 neuron in hidden layer,2 neuron in output layer  
+        #list is number of neurons in layers = [4,3,2] for 4 input,1 hidden layer.3 neuron in hidden layer,2 neuron in output layer  
         
-        #list of number of neurons in layers
+        #list is number of neurons in layers
         self._katmanlardaki_noron_sayilari = katmanlardaki_noron_sayilari
 
         #number of dataset rows
