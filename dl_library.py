@@ -12,7 +12,9 @@ class nn:
     def __init__(self,katmanlardaki_noron_sayilari,aktivasyon_fonksiyonlari=None):
         #katmanlardaki_noron_sayilari = [4,3,2] icin 4 giris,1 gizli katman vardir.3 noron gizli katman,2 noron da cikis katmaninda var demektir
         #hata kontrolleri daha sonra yapilacaktir katman sayisi ,0 ve altı girilemez vs...
-
+        
+        #list of number of neurons in layers = [4,3,2] for 4 input,1 hidden layer.3 neuron in hidden layer,2 neuron in output layer  
+        
         #list of number of neurons in layers
         self._katmanlardaki_noron_sayilari = katmanlardaki_noron_sayilari
 
@@ -130,8 +132,8 @@ class nn:
         self._sgd_ile_egitme(girdi, cikti, epoch, hata_fonksiyonu, ogrenme_katsayisi)
 
 ag=nn([2,2,2])
-#ag.katmanlar=np.array([katman(np.array([[0.15,0.2],[0.25,0.3]]),np.array([[0.35,0.35]])),katman(np.array([[0.4,0.45],[0.5,0.55]]),np.array([[0.6,0.6]]))])
-ag.katmanlar=np.array([katman(np.array([[0.15,0.25],[0.2,0.3]]),np.array([[0.35,0.35]])),katman(np.array([[0.4,0.5],[0.45,0.55]]),np.array([[0.6,0.6]]))])
+#ag.katmanlar=np.array([katman(np.array([[0.15,0.25],[0.2,0.3]]),np.array([[0.35,0.35]])),katman(np.array([[0.4,0.5],[0.45,0.55]]),np.array([[0.6,0.6]]))])
 giris=np.array([[0.05,0.1]])
 cikis=np.array([[0.01,0.99]])
-ag.egitim(giris,cikis,1,ogrenme_katsayisi=0.5)
+ag.egitim(giris,cikis,1000,ogrenme_katsayisi=0.5)
+print(ag.ileri_yayilim(giris))
