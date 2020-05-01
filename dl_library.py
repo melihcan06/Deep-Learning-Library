@@ -1,8 +1,11 @@
 import numpy as np
 
-#layers
+#layer
 class katman:
     def __init__(self,agirliklar,biaslar):
+        #Actually refers to weights and biases between 2 layers ---> layer[i] and layer[i+1]
+        #but deltas is for layer[i+1]
+
         #weights
         self.agirliklar=agirliklar
         #biases
