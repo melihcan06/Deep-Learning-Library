@@ -127,7 +127,7 @@ class nn:
     def egitim(self,girdi,cikti,epoch,batch_size=None,hata_fonksiyonu='mse',optimizer={},ogrenme_katsayisi=0.1):
         optimizer['ad']='sgd'
         optimizer['momentum'] = 0
-        self._sgd_ile_egitme(girdi, cikti, epoch, batch_size, hata_fonksiyonu, optimizer, ogrenme_katsayisi)
+        self._sgd_ile_egitme(girdi, cikti, epoch, hata_fonksiyonu, ogrenme_katsayisi)
 
 ag=nn([2,2,2])
 #ag.katmanlar=np.array([katman(np.array([[0.15,0.2],[0.25,0.3]]),np.array([[0.35,0.35]])),katman(np.array([[0.4,0.45],[0.5,0.55]]),np.array([[0.6,0.6]]))])
