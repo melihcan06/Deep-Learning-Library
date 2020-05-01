@@ -3,8 +3,11 @@ import numpy as np
 #layers
 class katman:
     def __init__(self,agirliklar,biaslar):
+        #weights
         self.agirliklar=agirliklar
+        #biases
         self.biaslar=biaslar
+        #deltas
         self.deltalar=np.zeros((biaslar.shape))#okuldaki sigmoid hatasi dedigimiz deltalar cikti katmanindaki noronlar icin LossF'() * AktivasyonF'()
         #gizli katmanlar icin (E S*w) * AktivasyonF'() = o norona etki eden sonraki katman noronlarinin deltasi * etki eden agirlik
 
