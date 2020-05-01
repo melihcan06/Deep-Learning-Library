@@ -1,5 +1,37 @@
 import numpy as np
 
+class aktivasyon():
+    def sigmoid(self, x):
+        return 1 / (1 + np.exp(-x))
+
+    # derivative of sigmoid
+    def sigmoid_turev(self, x):  # f_net=sigmoid(net),sigmoid'(net)=f_net*(1-f_net)
+        return x * (1 - x)
+
+    def relu(self,x):
+        if x<0:
+            return 0
+        else:
+            return x
+
+    def relu_turev(self,x):#??????????
+        return 0
+
+    def softmax(self,x,y):
+        return 1
+
+    def softmax_turev(self,x,y):
+        return 1
+
+    def uygula(self,ad='sigmoid',x=None,y=None):
+        if ad=='sigmoid':
+            return self.sigmoid(x)
+        if ad=='relu':
+            return self.relu(x)
+        if ad=='softmax':
+            return self.softmax(x,y)
+        else:
+            return None
 
 # layer
 class katman:
@@ -12,8 +44,8 @@ class katman:
         # biases
         self.biaslar = biaslar
         # deltas
-        self.deltalar = np.zeros((
-                                     biaslar.shape))  # okuldaki sigmoid hatasi dedigimiz deltalar cikti katmanindaki noronlar icin LossF'() * AktivasyonF'()
+        self.deltalar = np.zeros((biaslar.shape))
+        # okuldaki sigmoid hatasi dedigimiz deltalar cikti katmanindaki noronlar icin LossF'() * AktivasyonF'()
         # gizli katmanlar icin (E S*w) * AktivasyonF'() = o norona etki eden sonraki katman noronlarinin deltasi * etki eden agirlik
 
 
@@ -34,6 +66,7 @@ class nn:
         # number of output layer neruons
         self._cikti_katmanindaki_noron_sayisi = katmanlardaki_noron_sayilari[-1]
 
+        self._aktivasyon_islem=aktivasyon()
         self.katmanlar = self._katmanlari_olustur()
 
         if aktivasyon_fonksiyonlari == None:  # all degil de none ya da one olacak heralde
@@ -51,22 +84,15 @@ class nn:
             katmanlar.append(katman(agirliklar, biaslar))
         return np.array(katmanlar)
 
-    def _sigmoid(self, x):
-        return 1 / (1 + np.exp(-x))
-
-    # derivative of sigmoid
-    def _sigmoid_turev(self, x):  # f_net=sigmoid(net),sigmoid'(net)=f_net*(1-f_net)
-        return x * (1 - x)
-
     # derivative of activation func
     def _aktivasyon_fonk_turev(self, x, ad='sigmoid'):
         if ad == 'sigmoid':
-            return self._sigmoid_turev(x)
+            return self._aktivasyon_islem.sigmoid_turev(x)
 
     # activation func
     def _aktivasyon_fonk(self, x, ad='sigmoid'):
         if ad == 'sigmoid':
-            return self._sigmoid(x)
+            return self._aktivasyon_islem.sigmoid(x)
 
     # sum of output neurons mse
     def _mean_squared_error(self, y, beklenen):
@@ -138,7 +164,7 @@ class nn:
                         self.katmanlar[j].agirliklar[t] -= np.array(ogrenme_katsayisi * turev).reshape((2,))
                         # w -= learning rate * derivative Error total/derivative w for sgd with momentum = 0
 
-        return 1
+        return self.katmanlar[0].deltalar
 
     # train method
     def egitim(self, girdi, cikti, epoch, batch_size=None, hata_fonksiyonu='mse', optimizer={}, ogrenme_katsayisi=0.1):
@@ -181,7 +207,8 @@ class konvolusyon:
         return self._padding(grt,padding_boyutu,padding_yontemi)
 
     #convolution for gray scale image
-    def _konvolusyon_gri(self,grt,filtre,kaydirma=(1,1),padding=False,biases=None):#tam kontrol yapilmadi!!!!
+    def _konvolusyon_gri(self,grt,filtre,kaydirma=(1,1),padding=False,biases=None,aktivasyon_fonksiyonu='relu'):#tam kontrol yapilmadi!!!!
+        aktv=aktivasyon()
         #girdi=input,filtre=filter,kaydirma=stride(tuple(x,y)),if padding is True input shape = output shape
         ksob=self._konvolusyon_sonrasi_olusacak_boyut_hesabi(grt.shape,filtre.shape, kaydirma)
         if padding==True:
@@ -195,7 +222,8 @@ class konvolusyon:
         for boy in range(0,goruntu_boy_bitis,kaydirma[0]):
             yeni_en_index=0
             for en in range(0,goruntu_en_bitis,kaydirma[1]):
-                yeni[yeni_boy_index][yeni_en_index]=np.sum(np.multiply(grt[boy:boy+filtre.shape[0],en:en+filtre.shape[1]],filtre))
+                deger=np.sum(np.multiply(grt[boy:boy+filtre.shape[0],en:en+filtre.shape[1]],filtre))
+                yeni[yeni_boy_index][yeni_en_index]=aktv.uygula('relu',deger)
                 yeni_en_index+=1
             yeni_boy_index+=1
 
@@ -224,7 +252,6 @@ class konvolusyon:
             return self._konvolusyon_rgb(grt, filtre, kaydirma, padding=False, biases=None)
         else:
             return self._konvolusyon_gri(grt, filtre, kaydirma, padding=False, biases=None)
-
 
     #alt_sinir=new value of min
     #ust_sinir new value of max
@@ -259,7 +286,7 @@ class konvolusyon:
     # 2 threshold values are used first and their numbers are taken.Used when converting array to img
     def _sinirla(self,a,alt=0,ust=255,veri_tipi="uint8"):
         c = np.clip(a, alt, ust)
-        return  np.array(c, dtype=veri_tipi)
+        return np.array(c, dtype=veri_tipi)
 
     #array to img
     def ciktiyi_goruntuye_cevir(self,grt,olcekleme=True):
@@ -270,9 +297,132 @@ class konvolusyon:
                 grt=self.olcekleme3b(grt)
         return self._sinirla(grt)
 
-ag = nn([2, 2, 2])
+class pooling:
+    # shape calculation for after convolution
+    def _konvolusyon_sonrasi_olusacak_boyut_hesabi(self, goruntu_boyutu, filtre_boyutu, kaydirma, padding=(0, 0)):
+        # ((g-f+2*p)/k)+1=c , ((i-f+2*p)/s)+1=o
+        yeni_boy = ((goruntu_boyutu[0] - filtre_boyutu[0] + 2 * padding[0]) / kaydirma[0]) + 1
+        yeni_en = ((goruntu_boyutu[1] - filtre_boyutu[1] + 2 * padding[1]) / kaydirma[1]) + 1
+        return (int(yeni_boy), int(yeni_en))
+
+    def pooling(self,grt,filtre_boyutu,kaydirma,yontem='max'):
+        ksob = self._konvolusyon_sonrasi_olusacak_boyut_hesabi(grt.shape, filtre_boyutu, kaydirma)
+        yeni = np.zeros(ksob, dtype="float32")
+        goruntu_boy_bitis = (kaydirma[0] * (ksob[0] - 1)) + 1  # yanlis duzelt
+        goruntu_en_bitis = (kaydirma[1] * (ksob[1] - 1)) + 1  # yanlis duzelt
+        yeni_boy_index = 0
+        if yontem=='max':
+            for boy in range(0, goruntu_boy_bitis, kaydirma[0]):
+                yeni_en_index = 0
+                for en in range(0, goruntu_en_bitis, kaydirma[1]):
+                    yeni[yeni_boy_index][yeni_en_index] = np.max(grt[boy:boy + filtre_boyutu[0], en:en + filtre_boyutu[1]])
+                    yeni_en_index += 1
+                yeni_boy_index += 1
+        else:#yontem==mean or average
+            for boy in range(0, goruntu_boy_bitis, kaydirma[0]):
+                yeni_en_index = 0
+                for en in range(0, goruntu_en_bitis, kaydirma[1]):
+                    yeni[yeni_boy_index][yeni_en_index] = np.mean(grt[boy:boy + filtre_boyutu[0], en:en + filtre_boyutu[1]])
+                    yeni_en_index += 1
+                yeni_boy_index += 1
+        return yeni
+
+class cnn:
+    def __init__(self):
+        self._konvolusyon_islemleri=konvolusyon()
+        self._pooling_islemleri=pooling()
+        self._katmanlar=[]
+        self._konv_katmani_num = 1
+        self._pooling_katmani_num = 1
+        self._ysa_katmani_num = 1
+
+    def _tensorleri_topla(self,x):
+        y=x[:,:,0]
+        for i in range(1,x.shape[2]):
+            y=np.add(y,x[:,:,i])
+        return y
+
+    def _duzlestirme(self,x):
+        return np.reshape(x,(1,(x.shape[0]*x.shape[1])))
+
+    def cnn_giris_katmani_ekle(self,girdi_boyutu):
+        cnn_g_k = {'ad': 'cnn_giris', 'girdi_boyutu':girdi_boyutu}
+        self._katmanlar.append(cnn_g_k)
+
+    def konvolusyon_katmani_ekle(self,filtre_sayisi,filtre_boyutu,kaydirma,aktivasyon_fonksiyonu,padding=False):
+        konv_k={'ad':'konv'+str(self._konv_katmani_num),'filtre_sayisi':filtre_sayisi,'filtre_boyutu':filtre_boyutu,'kaydirma':kaydirma,
+                'aktivasyon_fonksiyonu':aktivasyon_fonksiyonu,'padding':padding}
+        #padding == False normal conv shape decrease, padding == True after konv input shape == output shape
+        self._konv_katmani_num+=1
+        self._katmanlar.append(konv_k)
+
+    def pooling_katmani_ekle(self,filtre_boyutu,kaydirma,yontem='max'):
+        pool_k={'ad':'pool'+str(self._pooling_katmani_num),'filtre_boyutu':filtre_boyutu,'kaydirma':kaydirma,'yontem':yontem}
+        self._pooling_katmani_num+=1
+        self._katmanlar.append(pool_k)
+
+    #flatten layer
+    def duzlestirme_katmani_ekle(self):
+        duz_k={'ad':'duzlestirme'}
+        self._katmanlar.append(duz_k)
+
+    def ysa_katmani_ekle(self,noron_sayisi,aktivasyon_fonksiyonu):
+        ysa_k={'ad':'ysa_katman'+str(self._ysa_katmani_num),'noron_sayisi':noron_sayisi,'aktivasyon_fonksiyonu':aktivasyon_fonksiyonu}
+        self._ysa_katmani_num+=1
+        self._katmanlar.append(ysa_k)
+
+    def egit(self, girdi, cikti, epoch, batch_size=None, hata_fonksiyonu='mse', optimizer={}, ogrenme_katsayisi=0.1):
+        ysa_noron_sayilari = []
+        ysa_aktv_fonklari = []
+        for i in range(len(self._katmanlar)):
+            if self._katmanlar[i]['ad'].count('ysa_katman')==1:
+                ysa_noron_sayilari.append(self._katmanlar[i]['noron_sayisi'])
+                ysa_aktv_fonklari.append(self._katmanlar[i]['aktivasyon_fonksiyonu'])
+        self._ysa=nn(ysa_noron_sayilari,ysa_aktv_fonklari)
+                                        
+        
+    def tamin_yap(self,x):
+        return 1
+
+    def katmanlari_bas(self):
+        for i in self._katmanlar:
+            print(i)
+
+    """def ysa_ekle(self, katmanlardaki_noron_sayilari, aktivasyon_fonksiyonlari=None):
+        return 1"""
+
+cnn1=cnn()
+cnn1.cnn_giris_katmani_ekle((100,100))
+cnn1.konvolusyon_katmani_ekle(2,(3,3),(1,1),'relu')
+cnn1.pooling_katmani_ekle((3,3),(3,3))
+cnn1.duzlestirme_katmani_ekle()
+cnn1.ysa_katmani_ekle(10,'sigmoid')
+cnn1.katmanlari_bas()
+
+"""import cv2
+a=cv2.resize(cv2.imread("koordinat.png"),(50,50))
+cnn1=konvolusyon()
+b=np.array([[1,2,3,4],[1,2,3,4],[1,2,3,4]])
+c=cnn1.konvolusyon_islemi(a,b)
+d=cnn1.ciktiyi_goruntuye_cevir(c,False)
+e=cnn1.ciktiyi_goruntuye_cevir(c)
+cv2.imshow("1",d)
+cv2.imshow("2",e)
+cv2.waitKey(0)"""
+
+"""a=np.array([[1,2,3,4,5],
+            [6,7,8,9,10],
+            [1,2,3,4,5],
+            [6,7,8,9,10],
+            [1,2,3,4,5],
+            [6,7,8,9,10]])
+b=np.array([[1,2,3,4],[1,2,3,4],[1,2,3,4]])
+cnn1=konvolusyon()
+print(cnn1.konvolusyon_gri(a,b,(1,1)))"""
+
+"""ag = nn([2, 2, 2])
 # ag.katmanlar=np.array([katman(np.array([[0.15,0.25],[0.2,0.3]]),np.array([[0.35,0.35]])),katman(np.array([[0.4,0.5],[0.45,0.55]]),np.array([[0.6,0.6]]))])
 giris = np.array([[0.05, 0.1]])
 cikis = np.array([[0.01, 0.99]])
 ag.egitim(giris, cikis, 1000, ogrenme_katsayisi=0.5)
-print(ag.ileri_yayilim(giris))
+print(ag.ileri_yayilim(giris))"""
