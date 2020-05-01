@@ -241,17 +241,17 @@ class konvolusyon:
 
     # convolution for rgb image
     def _konvolusyon_rgb(self, grt, filtre, kaydirma=(1,1), padding=False, biases=None):
-        b = self._konvolusyon_gri(grt[:, :, 0], filtre, kaydirma, padding=False, biases=None)
-        g = self._konvolusyon_gri(grt[:, :, 1], filtre, kaydirma, padding=False, biases=None)
-        r = self._konvolusyon_gri(grt[:, :, 2], filtre, kaydirma, padding=False, biases=None)
+        b = self._konvolusyon_gri(grt[:, :, 0], filtre, kaydirma, padding, biases=None)
+        g = self._konvolusyon_gri(grt[:, :, 1], filtre, kaydirma, padding, biases=None)
+        r = self._konvolusyon_gri(grt[:, :, 2], filtre, kaydirma, padding, biases=None)
         return self._rgb_kanallari_birlestir(b,g,r)
 
     # convolution
     def konvolusyon_islemi(self, grt, filtre, kaydirma=(1,1), padding=False, biases=None):
         if len(grt.shape)==3:
-            return self._konvolusyon_rgb(grt, filtre, kaydirma, padding=False, biases=None)
+            return self._konvolusyon_rgb(grt, filtre, kaydirma, padding, biases=None)
         else:
-            return self._konvolusyon_gri(grt, filtre, kaydirma, padding=False, biases=None)
+            return self._konvolusyon_gri(grt, filtre, kaydirma, padding, biases=None)
 
     #alt_sinir=new value of min
     #ust_sinir new value of max
@@ -345,9 +345,9 @@ class cnn:
     def _duzlestirme(self,x):
         return np.reshape(x,(1,(x.shape[0]*x.shape[1])))
 
-    def cnn_giris_katmani_ekle(self,girdi_boyutu):
+    """def cnn_giris_katmani_ekle(self,girdi_boyutu):
         cnn_g_k = {'ad': 'cnn_giris', 'girdi_boyutu':girdi_boyutu}
-        self._katmanlar.append(cnn_g_k)
+        self._katmanlar.append(cnn_g_k)"""
 
     def konvolusyon_katmani_ekle(self,filtre_sayisi,filtre_boyutu,kaydirma,aktivasyon_fonksiyonu,padding=False):
         konv_k={'ad':'konv'+str(self._konv_katmani_num),'filtre_sayisi':filtre_sayisi,'filtre_boyutu':filtre_boyutu,'kaydirma':kaydirma,
@@ -379,8 +379,8 @@ class cnn:
                 ysa_noron_sayilari.append(self._katmanlar[i]['noron_sayisi'])
                 ysa_aktv_fonklari.append(self._katmanlar[i]['aktivasyon_fonksiyonu'])
         self._ysa=nn(ysa_noron_sayilari,ysa_aktv_fonklari)
-                                        
-        
+
+
     def tamin_yap(self,x):
         return 1
 
@@ -388,16 +388,24 @@ class cnn:
         for i in self._katmanlar:
             print(i)
 
-    """def ysa_ekle(self, katmanlardaki_noron_sayilari, aktivasyon_fonksiyonlari=None):
-        return 1"""
+    def deneme_methodu(self,x):
+        y=x.copy()
+        for i in range(len(self._katmanlar)):
+            if self._katmanlar[i]['ad'].count('konv') == 1:
+                y=self._konvolusyon_islemleri.konvolusyon_islemi(y,np.ones((3,3))/9.0)
+            elif self._katmanlar[i]['ad'].count('pool') == 1:
+                y=self._pooling_islemleri.pooling(y,(2,2),(2,2))
+        return 1
 
 cnn1=cnn()
-cnn1.cnn_giris_katmani_ekle((100,100))
+#cnn1.cnn_giris_katmani_ekle((100,100))
 cnn1.konvolusyon_katmani_ekle(2,(3,3),(1,1),'relu')
 cnn1.pooling_katmani_ekle((3,3),(3,3))
 cnn1.duzlestirme_katmani_ekle()
 cnn1.ysa_katmani_ekle(10,'sigmoid')
 cnn1.katmanlari_bas()
+import cv2
+a=cv2.resize(cv2.imread("koordinat.png"),(50,50))
 
 """import cv2
 a=cv2.resize(cv2.imread("koordinat.png"),(50,50))
