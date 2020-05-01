@@ -64,17 +64,20 @@ class nn:
         if ad=='sigmoid':
             return self._sigmoid(x)
 
-    #sum of output neurons mse
+    #sum of output neurons mse    
     def _mean_squared_error(self,y,beklenen):
+        #y=output beklenen=target
         return np.sum(((beklenen-y)**2)/y.shape[1])
 
     #derivative of mse for every output neuron
+    #ex:f=0.5*(target-output)**2 => f'=output-target
     def _mean_squared_error_turevi_tekli(self,y,beklenen):#tekli = eo1 eo2 diye ayri ayri donduruluyor
+        #y=output beklenen=target
         return (y-beklenen)#turevi alinca boyle oluyor
 
-    #derivative of loss function for every output neuron
-    #ex:f=0.5*(target-output)**2 => f'=output-target
+    #derivative of loss function for every output neuron    
     def _hata_fonksiyonu_turevi_tekli(self,y,beklenen,ad='mse'):#formullerde kullanilmak icin turevi alinmis hata
+        #y=output beklenen=target
         if ad == 'mse':
             return self._mean_squared_error_turevi_tekli(y,beklenen)
 
