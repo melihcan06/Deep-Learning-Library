@@ -28,7 +28,7 @@ class nn:
         self._girdi_sayisi=katmanlardaki_noron_sayilari[0]
         # number of hidden layers
         self._ara_katman_sayisi=len(katmanlardaki_noron_sayilari)-2
-        # number of output layer's neruons
+        # number of output layer neruons
         self._cikti_katmanindaki_noron_sayisi=katmanlardaki_noron_sayilari[-1]
 
         self.katmanlar=self._katmanlari_olustur()
