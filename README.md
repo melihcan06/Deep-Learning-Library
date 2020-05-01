@@ -11,6 +11,6 @@ I am planing this improvements:
 
 2-Updating all biases.
 
-3-Concatenating all layers and their coordination.
+3-Concatenating all layers and ensuring their coordination.
 
 4-Extra loss,activation functions and optimizers.
