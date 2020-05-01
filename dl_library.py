@@ -119,7 +119,7 @@ class nn:
                 #calculating hidden neurons deltas
                 for j in range(self._ara_katman_sayisi):
                     #delta_zinciri = o norona etki eden sonraki noronlarin deltalarinin agirliklara gore toplami
-                    #delta_zinciri = sum of later deltas multiply with wieghts
+                    #delta_zinciri = before sum next layer deltas multiply with weights
                     delta_zinciri=np.dot(self.katmanlar[j+1].deltalar,self.katmanlar[j+1].agirliklar.T)
                     self.katmanlar[j].deltalar=self._aktivasyon_fonk_turev(f_netler_cache[j+1])*delta_zinciri
 
@@ -128,7 +128,7 @@ class nn:
                 for j in range(self._ara_katman_sayisi+1):
                     for t in range(self.katmanlar[j].agirliklar.shape[0]):
                         #turev = agirliga gelen giris ya da girdi * delta
-                        #derivative before with multiply learning rate
+                        #derivative before multiply learning rate
                         turev=f_netler_cache[j]*self.katmanlar[j].deltalar
                         self.katmanlar[j].agirliklar[t]-=np.array(ogrenme_katsayisi*turev).reshape((2,))
 
