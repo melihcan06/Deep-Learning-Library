@@ -1,5 +1,6 @@
 import numpy as np
 
+#layers
 class katman:
     def __init__(self,agirliklar,biaslar):
         self.agirliklar=agirliklar
@@ -25,6 +26,7 @@ class nn:
         else:
             self.aktivasyon_fonksiyonlari=aktivasyon_fonksiyonlari
 
+    #create layers
     def _katmanlari_olustur(self):
         katmanlar=[]
         for i in range(self._ara_katman_sayisi + 1):
@@ -36,41 +38,41 @@ class nn:
     def _sigmoid(self,x):
         return 1/(1+np.exp(-x))
 
+    #derivative of sigmoid
     def _sigmoid_turev(self,x):#f_net=sigmoid(net),sigmoid'(net)=f_net*(1-f_net)
         return x*(1-x)
 
+    #derivative of activation func
     def _aktivasyon_fonk_turev(self,x,ad='sigmoid'):
         if ad=='sigmoid':
             return self._sigmoid_turev(x)
 
+    #activation func
     def _aktivasyon_fonk(self,x,ad='sigmoid'):
         if ad=='sigmoid':
             return self._sigmoid(x)
 
-    def _mean_squared_error(self,y,beklenen):#bi bak dogru mu diye
+    #sum of output neurons mse
+    def _mean_squared_error(self,y,beklenen):
         return np.sum(((beklenen-y)**2)/y.shape[1])
 
-    def _mean_squared_error_turevi_tekli(self,y,beklenen):#tekli = eo1 eo2 diye ayri ayri donduruluyor demek sigmoidli egitimde kullaniliyor
+    #derivative of mse for every output neuron
+    def _mean_squared_error_turevi_tekli(self,y,beklenen):#tekli = eo1 eo2 diye ayri ayri donduruluyor
         return (y-beklenen)#turevi alinca boyle oluyor
 
+    #derivative of loss function for every output neuron
+    #ex:f=0.5*(target-output)**2 => f'=output-target
     def _hata_fonksiyonu_turevi_tekli(self,y,beklenen,ad='mse'):#formullerde kullanilmak icin turevi alinmis hata
         if ad == 'mse':
             return self._mean_squared_error_turevi_tekli(y,beklenen)
 
+    #loss function
     def _hata_fonksiyonu(self,y,beklenen,ad='mse'):#eksana bastirmalik hata,y=bulunan, beklenen=veri setinde olan
+        #value of printing  ,y=output beklenen=target
         if ad == 'mse':
             return self._mean_squared_error(y,beklenen)
 
-    def ileri_yayilim2(self,girdi):#eger katman[i]agirliklari bir norondan cikan degil bir sonraki norona gelene gore tutuluyorsa
-        f_net = girdi
-        f_netler_cache=[girdi]
-        for i in range(self._ara_katman_sayisi + 1):
-            katm=self.katmanlar[i]
-            net=np.dot(f_net,katm.agirliklar.T)+katm.biaslar
-            f_net = self._aktivasyon_fonk(net,self.aktivasyon_fonksiyonlari[i])
-            f_netler_cache.append(f_net)
-        return np.array(f_netler_cache)
-
+    #forward propagation
     def ileri_yayilim(self,girdi):#eger katman[i]agirliklar[i] i. norondan cikana gore tutuluyorsa
         f_net = girdi
         f_netler_cache=[f_net]
@@ -82,73 +84,47 @@ class nn:
             f_netler_cache.append(f_net)
         return np.array(f_netler_cache)
 
-    def _sigmoid_fonk_ile_egitim(self,girdi,beklenen,epoch,batch_size=None,hata_fonksiyonu='mse',optimizer={},ogrenme_katsayisi=0.1):
-        #ilk denememdi silinebilir
+    #train with stochastic gradient descent
+    def _sgd_ile_egitme(self,girdi,beklenen,epoch,hata_fonksiyonu='mse',ogrenme_katsayisi=0.1):
         #girdi boyutu nx... n=veri setinde kac tane ornek varsa ,...= 1 tane ornek=girdi[0]
+        #input shape nx... n=number of samples in dataset ,...= 1 sample = girdi[0]
         for tekrar in range(epoch):#epoch
             for i in range(girdi.shape[0]):#iterasyon
                 g = np.reshape(girdi[i], (1, girdi[0].shape[0]))#sgd kullaniliyor
-                c = np.reshape(beklenen[i], (1, beklenen[0].shape[0]))#sgd kullaniliyor
-                f_netler_cache = self.ileri_yayilim(g)
-
-                #once cikti katmanindan onceki agirliklari guncelleyecegiz
-                son_katman_hatalari=self._hata_fonksiyonu_turevi_tekli(f_netler_cache[-1],c)
-                sigmoid_turevleri=self._sigmoid_turev(f_netler_cache[-1])
-
-                #kac tane cikti noronu varsa
-                for j in range(self._cikti_katmanindaki_noron_sayisi):#self.katmanlar[-1].agirliklar.shape[0]):
-                    #print(self.katmanlar[-1].agirliklar[j])
-                    y=son_katman_hatalari*sigmoid_turevleri*f_netler_cache[-2]
-                    #print(y)
-                    #print(son_katman_hatalari[0][1],sigmoid_turevleri[0][1],f_netler_cache[-2][0][1])
-                    self.katmanlar[-1].agirliklar[j]-=np.array(ogrenme_katsayisi*y).reshape((2,))
-                    #print(self.katmanlar[-1].agirliklar[j])#boyle diyerek 2 agirlikta da 1. ciktinin delta hatasını(okuldaki sigmoid h.) nı kullanmis oldum
-
-                print(self.katmanlar[-1].agirliklar)
-
-                #sondan onceki katmanlarin agirliklarinin guncellenmesi
-                #burada dEtotal/dw de farklilik var
-
-        return 1
-
-    def _egitme(self,girdi,beklenen,epoch,batch_size=None,hata_fonksiyonu='mse',optimizer={},ogrenme_katsayisi=0.1):
-        #girdi boyutu nx... n=veri setinde kac tane ornek varsa ,...= 1 tane ornek=girdi[0]
-        for tekrar in range(epoch):#epoch
-            for i in range(girdi.shape[0]):#iterasyon
-                g = np.reshape(girdi[i], (1, girdi[0].shape[0]))#sgd kullaniliyor
-                c = np.reshape(beklenen[i], (1, beklenen[0].shape[0]))#sgd kullaniliyor
+                c = np.reshape(beklenen[i], (1, beklenen[0].shape[0]))#sgd using
                 f_netler_cache = self.ileri_yayilim(g)
 
                 #cikti katmanindaki noronlarin deltalarini hesaplama
-                son_katman_hatalari=self._hata_fonksiyonu_turevi_tekli(f_netler_cache[-1],c)
+                # calculating output neurons deltas
+                son_katman_hatalari=self._hata_fonksiyonu_turevi_tekli(f_netler_cache[-1],c,hata_fonksiyonu)
                 aktivasyon_turevleri=self._aktivasyon_fonk_turev(f_netler_cache[-1],self.aktivasyon_fonksiyonlari[-1])
                 self.katmanlar[-1].deltalar=aktivasyon_turevleri*son_katman_hatalari
 
                 #gizli katman noronlarinin deltalarini hesaplama
+                #calculating hidden neurons deltas
                 for j in range(self._ara_katman_sayisi):
-                    #delta_zinciri o norona etki eden sonraki noronlarin deltalarinin agirliklara gore toplami
+                    #delta_zinciri = o norona etki eden sonraki noronlarin deltalarinin agirliklara gore toplami
+                    #delta_zinciri = sum of later deltas multiply with wieghts
                     delta_zinciri=np.dot(self.katmanlar[j+1].deltalar,self.katmanlar[j+1].agirliklar.T)
                     self.katmanlar[j].deltalar=self._aktivasyon_fonk_turev(f_netler_cache[j+1])*delta_zinciri
 
                 #agirliklarin guncellenmesi
+                #updating weights
                 for j in range(self._ara_katman_sayisi+1):
                     for t in range(self.katmanlar[j].agirliklar.shape[0]):
                         #turev = agirliga gelen giris ya da girdi * delta
+                        #derivative before with multiply learning rate
                         turev=f_netler_cache[j]*self.katmanlar[j].deltalar
-                        self.katmanlar[j].agirliklar[t]-=np.array(ogrenme_katsayisi*turev).reshape((2,))                
+                        self.katmanlar[j].agirliklar[t]-=np.array(ogrenme_katsayisi*turev).reshape((2,))
 
         return 1
 
+    #train method
     def egitim(self,girdi,cikti,epoch,batch_size=None,hata_fonksiyonu='mse',optimizer={},ogrenme_katsayisi=0.1):
         optimizer['ad']='sgd'
-        optimizer['momentum'] = 0        
-        #self._sigmoid_fonk_ile_egitim(girdi,cikti,epoch,batch_size,hata_fonksiyonu,optimizer,ogrenme_katsayisi)
-        self._egitme(girdi, cikti, epoch, batch_size, hata_fonksiyonu, optimizer, ogrenme_katsayisi)
+        optimizer['momentum'] = 0
+        self._sgd_ile_egitme(girdi, cikti, epoch, batch_size, hata_fonksiyonu, optimizer, ogrenme_katsayisi)
 
-#ag=nn([2,2,1])
-#ag.katmanlar=np.array([katman(np.array([[0.129952,0.570345],[-0.923123,-0.328932]]),np.array([[0.341232,-0.115223]])),katman(np.array([[0.164732],[0.752621]]),np.array([[-0.993423]]))])
-#giris=np.array([[0,0]])
-#cikis=np.array([[0]])
 ag=nn([2,2,2])
 #ag.katmanlar=np.array([katman(np.array([[0.15,0.2],[0.25,0.3]]),np.array([[0.35,0.35]])),katman(np.array([[0.4,0.45],[0.5,0.55]]),np.array([[0.6,0.6]]))])
 ag.katmanlar=np.array([katman(np.array([[0.15,0.25],[0.2,0.3]]),np.array([[0.35,0.35]])),katman(np.array([[0.4,0.5],[0.45,0.55]]),np.array([[0.6,0.6]]))])
