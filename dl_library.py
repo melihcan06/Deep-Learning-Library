@@ -298,14 +298,24 @@ class konvolusyon:
         return self._sinirla(grt)
 
 class pooling:
-    # shape calculation for after convolution
+    # shape calculation for after convolution #convda da var
     def _konvolusyon_sonrasi_olusacak_boyut_hesabi(self, goruntu_boyutu, filtre_boyutu, kaydirma, padding=(0, 0)):
         # ((g-f+2*p)/k)+1=c , ((i-f+2*p)/s)+1=o
         yeni_boy = ((goruntu_boyutu[0] - filtre_boyutu[0] + 2 * padding[0]) / kaydirma[0]) + 1
         yeni_en = ((goruntu_boyutu[1] - filtre_boyutu[1] + 2 * padding[1]) / kaydirma[1]) + 1
         return (int(yeni_boy), int(yeni_en))
 
-    def pooling(self,grt,filtre_boyutu,kaydirma,yontem='max'):
+    # concatenating r g b channels #convda da var
+    def _rgb_kanallari_birlestir(self, b, g, r, veri_tipi="float32"):
+        yeni = np.zeros((b.shape[0], b.shape[1], 3), dtype=veri_tipi)
+        for i in range(b.shape[0]):
+            for j in range(b.shape[1]):
+                yeni[i][j][0] = b[i][j]
+                yeni[i][j][1] = g[i][j]
+                yeni[i][j][2] = r[i][j]
+        return yeni
+    
+    def _pooling_gri(self,grt,filtre_boyutu,kaydirma,yontem='max'):
         ksob = self._konvolusyon_sonrasi_olusacak_boyut_hesabi(grt.shape, filtre_boyutu, kaydirma)
         yeni = np.zeros(ksob, dtype="float32")
         goruntu_boy_bitis = (kaydirma[0] * (ksob[0] - 1)) + 1  # yanlis duzelt
@@ -326,6 +336,24 @@ class pooling:
                     yeni_en_index += 1
                 yeni_boy_index += 1
         return yeni
+
+    def _pooling_rgb(self, grt, filtre_boyutu, kaydirma, yontem='max'):
+        b = self._pooling_gri(grt[:, :, 0], filtre_boyutu, kaydirma, yontem)
+        g = self._pooling_gri(grt[:, :, 1], filtre_boyutu, kaydirma, yontem)
+        r = self._pooling_gri(grt[:, :, 2], filtre_boyutu, kaydirma, yontem)
+        return self._rgb_kanallari_birlestir(b, g, r)
+    
+    def pooling_islemi(self, grt, filtre_boyutu, kaydirma, yontem='max'):
+        if len(grt.shape)==3:
+            return self._pooling_rgb(grt, filtre_boyutu, kaydirma, yontem)
+        else:
+            return self._pooling_gri(grt, filtre_boyutu, kaydirma, yontem)
+    
+class filtreler:
+    def __init__(self,sayi,boyut):
+        self.sayi=sayi
+        self.boyut=boyut
+        #self.deltalar=[]#???
 
 class cnn:
     def __init__(self):
@@ -390,16 +418,20 @@ class cnn:
 
     def deneme_methodu(self,x):
         y=x.copy()
+        print(y.shape)
         for i in range(len(self._katmanlar)):
             if self._katmanlar[i]['ad'].count('konv') == 1:
                 y=self._konvolusyon_islemleri.konvolusyon_islemi(y,np.ones((3,3))/9.0)
+                print(y.shape)
             elif self._katmanlar[i]['ad'].count('pool') == 1:
-                y=self._pooling_islemleri.pooling(y,(2,2),(2,2))
+                y=self._pooling_islemleri.pooling_islemi(y,(2,2),(2,2))
+                print(y.shape)
         return self._konvolusyon_islemleri.ciktiyi_goruntuye_cevir(y)
 
 cnn1=cnn()
 #cnn1.cnn_giris_katmani_ekle((100,100))
 cnn1.konvolusyon_katmani_ekle(2,(3,3),(1,1),'relu')
+#cnn1.konvolusyon_katmani_ekle(2,(3,3),(1,1),'relu')
 cnn1.pooling_katmani_ekle((3,3),(3,3))
 cnn1.duzlestirme_katmani_ekle()
 cnn1.ysa_katmani_ekle(10,'sigmoid')
