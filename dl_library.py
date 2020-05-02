@@ -97,7 +97,7 @@ class nn:
     # sum of output neurons mse
     def _mean_squared_error(self, y, beklenen):
         # y=output beklenen=target
-        return np.sum(((beklenen - y) ** 2) / y.shape[1])
+        return np.sum(((beklenen - y) ** 2) / 2)#y.shape[1])
 
     # derivative of mse for every output neuron
     # ex:f=0.5*(target-output)**2 => f'=output-target
