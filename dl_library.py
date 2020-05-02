@@ -31,7 +31,7 @@ class aktivasyon():
         if ad=='softmax':
             return self.softmax(x,y)
         else:
-            return None
+            return x
 
 # layer
 class katman:
@@ -223,7 +223,7 @@ class konvolusyon:
             yeni_en_index=0
             for en in range(0,goruntu_en_bitis,kaydirma[1]):
                 deger=np.sum(np.multiply(grt[boy:boy+filtre.shape[0],en:en+filtre.shape[1]],filtre))
-                yeni[yeni_boy_index][yeni_en_index]=aktv.uygula('relu',deger)
+                yeni[yeni_boy_index][yeni_en_index]=aktv.uygula(aktivasyon_fonksiyonu,deger)
                 yeni_en_index+=1
             yeni_boy_index+=1
 
