@@ -395,7 +395,7 @@ class cnn:
                 y=self._konvolusyon_islemleri.konvolusyon_islemi(y,np.ones((3,3))/9.0)
             elif self._katmanlar[i]['ad'].count('pool') == 1:
                 y=self._pooling_islemleri.pooling(y,(2,2),(2,2))
-        return 1
+        return self._konvolusyon_islemleri.ciktiyi_goruntuye_cevir(y)
 
 cnn1=cnn()
 #cnn1.cnn_giris_katmani_ekle((100,100))
@@ -405,8 +405,13 @@ cnn1.duzlestirme_katmani_ekle()
 cnn1.ysa_katmani_ekle(10,'sigmoid')
 cnn1.katmanlari_bas()
 import cv2
-a=cv2.resize(cv2.imread("koordinat.png"),(50,50))
-
+#a=cv2.resize(cv2.imread("koordinat.png"),(50,50))
+a=cv2.imread("commandos.jpg")
+b=cnn1.deneme_methodu(a)
+cv2.imshow("1",a)
+cv2.imshow("2",b)
+cv2.waitKey(0)
+print(1)
 """import cv2
 a=cv2.resize(cv2.imread("koordinat.png"),(50,50))
 cnn1=konvolusyon()
