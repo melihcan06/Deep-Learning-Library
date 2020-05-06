@@ -126,7 +126,7 @@ class nn:#tek katmanli nn ekle cnn in sonuna tek katman koyulmak istediginde bu 
             norona_gelenler = []  # toplanmamis hali
             f_net = self._aktivasyon_fonk(net, self.aktivasyon_fonksiyonlari[i])
             f_netler_cache.append(f_net)
-        return np.array(f_netler_cache)
+        return f_netler_cache
 
     # train with stochastic gradient descent
     def _sgd_ile_egitme(self, girdi, beklenen, epoch, hata_fonksiyonu='mse', ogrenme_katsayisi=0.1):
@@ -159,8 +159,8 @@ class nn:#tek katmanli nn ekle cnn in sonuna tek katman koyulmak istediginde bu 
                     for t in range(self.katmanlar[j].agirliklar.shape[0]):
                         # turev = agirliga gelen giris ya da girdi * delta
                         # derivative before multiply learning rate
-                        turev = f_netler_cache[j] * self.katmanlar[j].deltalar
-                        self.katmanlar[j].agirliklar[t] -= np.array(ogrenme_katsayisi * turev).reshape((2,))
+                        turev = f_netler_cache[j][0][t] * self.katmanlar[j].deltalar
+                        self.katmanlar[j].agirliklar[t] -= np.array(ogrenme_katsayisi * turev).reshape(self.katmanlar[j].agirliklar[t].shape[0],)
                         # w -= learning rate * derivative Error total/derivative w for sgd with momentum = 0
 
         return self.katmanlar#[0].deltalar
@@ -526,15 +526,15 @@ b=np.array([[1,2,3,4],[1,2,3,4],[1,2,3,4]])
 cnn1=konvolusyon()
 print(cnn1.konvolusyon_gri(a,b,(1,1)))"""
 
-"""ag = nn([2, 2, 2])
+ag = nn([2, 2, 2])
 # ag.katmanlar=np.array([katman(np.array([[0.15,0.25],[0.2,0.3]]),np.array([[0.35,0.35]])),katman(np.array([[0.4,0.5],[0.45,0.55]]),np.array([[0.6,0.6]]))])
 giris = np.array([[0.05, 0.1]])
 cikis = np.array([[0.01, 0.99]])
 ag.egitim(giris, cikis, 1000, ogrenme_katsayisi=0.5)
-print(ag.ileri_yayilim(giris))"""
+print(ag.ileri_yayilim(giris))
 
-ag = nn([2, 3,4,5, 2])
+"""ag = nn([2, 3,4,5, 2])
 giris = np.array([[0.05, 0.1]])
 cikis = np.array([[0.01, 0.99]])
 ag.egitim(giris, cikis, 1000, ogrenme_katsayisi=0.5)
-print(ag.ileri_yayilim(giris))
+print(ag.ileri_yayilim(giris))"""
