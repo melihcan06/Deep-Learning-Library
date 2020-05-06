@@ -143,6 +143,7 @@ class nn:#tek katmanli nn ekle cnn in sonuna tek katman koyulmak istediginde bu 
                 son_katman_hatalari = self._hata_fonksiyonu_turevi_tekli(f_netler_cache[-1], c, hata_fonksiyonu)
                 aktivasyon_turevleri = self._aktivasyon_fonk_turev(f_netler_cache[-1],
                                                                    self.aktivasyon_fonksiyonlari[-1])
+                print(f_netler_cache[-1])
                 self.katmanlar[-1].deltalar = aktivasyon_turevleri * son_katman_hatalari
 
                 # gizli katman noronlarinin deltalarini hesaplama
@@ -467,8 +468,8 @@ class cnn:
             x=self._duzlestirme(x)
 
             # geri yayilim
-            nn_deltalar=self._ysa.egitim(x,y,1,hata_fonksiyonu=hata_fonksiyonu,optimizer=optimizer,ogrenme_katsayisi=ogrenme_katsayisi)
-            print(1)
+            self._ysa.egitim(x,y,1,hata_fonksiyonu=hata_fonksiyonu,optimizer=optimizer,ogrenme_katsayisi=ogrenme_katsayisi)
+            print(self._ysa.katmanlar)
 
 
     def _filtreyi_dondur(self,x):
@@ -482,7 +483,7 @@ class cnn:
             print(i)
 
 
-"""cnn1=cnn()
+cnn1=cnn()
 #cnn1.cnn_giris_katmani_ekle((100,100))
 cnn1.konvolusyon_katmani_ekle(2,(3,3),(1,1),'relu')
 #cnn1.konvolusyon_katmani_ekle(2,(3,3),(1,1),'relu')
@@ -491,30 +492,16 @@ cnn1.duzlestirme_katmani_ekle()
 cnn1.ysa_katmani_ekle(2,'sigmoid')
 cnn1.katmanlari_bas()
 import cv2
-
-
 a=cv2.resize(cv2.imread("commandos.jpg"),(50,50))
 a=np.expand_dims(a,axis=0)
 b=np.array([[1]])
-cnn1.egit(a,b,1)"""
+cnn1.egit(a,b,1)
 """a=cv2.imread("commandos.jpg")
 b=cnn1.deneme_methodu(a)
 cv2.imshow("1",a)
 cv2.imshow("2",b)
 cv2.waitKey(0)
 print(1)"""
-
-
-"""import cv2
-a=cv2.resize(cv2.imread("koordinat.png"),(50,50))
-cnn1=konvolusyon()
-b=np.array([[1,2,3,4],[1,2,3,4],[1,2,3,4]])
-c=cnn1.konvolusyon_islemi(a,b)
-d=cnn1.ciktiyi_goruntuye_cevir(c,False)
-e=cnn1.ciktiyi_goruntuye_cevir(c)
-cv2.imshow("1",d)
-cv2.imshow("2",e)
-cv2.waitKey(0)"""
 
 """a=np.array([[1,2,3,4,5],
             [6,7,8,9,10],
@@ -526,12 +513,12 @@ b=np.array([[1,2,3,4],[1,2,3,4],[1,2,3,4]])
 cnn1=konvolusyon()
 print(cnn1.konvolusyon_gri(a,b,(1,1)))"""
 
-ag = nn([2, 2, 2])
-# ag.katmanlar=np.array([katman(np.array([[0.15,0.25],[0.2,0.3]]),np.array([[0.35,0.35]])),katman(np.array([[0.4,0.5],[0.45,0.55]]),np.array([[0.6,0.6]]))])
+"""ag = nn([2, 2, 2])
+ag.katmanlar=np.array([katman(np.array([[0.15,0.25],[0.2,0.3]]),np.array([[0.35,0.35]])),katman(np.array([[0.4,0.5],[0.45,0.55]]),np.array([[0.6,0.6]]))])
 giris = np.array([[0.05, 0.1]])
 cikis = np.array([[0.01, 0.99]])
 ag.egitim(giris, cikis, 1, ogrenme_katsayisi=0.5)
-print(ag.ileri_yayilim(giris))
+print(ag.ileri_yayilim(giris))"""
 
 """ag = nn([2, 3,4,5, 2])
 giris = np.array([[0.05, 0.1]])
