@@ -530,7 +530,7 @@ ag = nn([2, 2, 2])
 # ag.katmanlar=np.array([katman(np.array([[0.15,0.25],[0.2,0.3]]),np.array([[0.35,0.35]])),katman(np.array([[0.4,0.5],[0.45,0.55]]),np.array([[0.6,0.6]]))])
 giris = np.array([[0.05, 0.1]])
 cikis = np.array([[0.01, 0.99]])
-ag.egitim(giris, cikis, 1000, ogrenme_katsayisi=0.5)
+ag.egitim(giris, cikis, 1, ogrenme_katsayisi=0.5)
 print(ag.ileri_yayilim(giris))
 
 """ag = nn([2, 3,4,5, 2])
