@@ -36,6 +36,16 @@ class aktivasyon():
         else:
             return x
 
+    def turev_uygula(self,ad='sigmoid',x=None,y=None):
+        if ad=='sigmoid':
+            return self.sigmoid_turev(x)
+        if ad=='relu':
+            return self.relu_turev(x)
+        if ad=='softmax':
+            return self.softmax_turev(x,y)
+        else:
+            return x
+
 # layer
 class katman:
     def __init__(self, agirliklar, biaslar):
@@ -167,7 +177,7 @@ class nn:#tek katmanli nn ekle cnn in sonuna tek katman koyulmak istediginde bu 
                         self.katmanlar[j].agirliklar[t] -= np.array(ogrenme_katsayisi * turev).reshape(self.katmanlar[j].agirliklar[t].shape[0],)
                         # w -= learning rate * derivative Error total/derivative w for sgd with momentum = 0
 
-        return self.katmanlar[0]#[0].deltalar
+        return self.katmanlar#[0].deltalar
 
     # train method
     def egitim(self, girdi, cikti, epoch, batch_size=None, hata_fonksiyonu='mse', optimizer={}, ogrenme_katsayisi=0.1):
@@ -465,10 +475,12 @@ class cnn:
             konv_cache.append([x])
             konv_katman_sayisi = 0
             eleman=x.copy()
+            konv_katmanlari_aktv_fonsiyonlari=[]
             for i in range(len(self._katmanlar)):
                 if self._katmanlar[i]['ad'].count('konv') == 1:
                     print("girdi")
                     konv_alt_cache = []
+                    konv_katmanlari_aktv_fonsiyonlari.append(self._katmanlar[i]['aktivasyon_fonksiyonu'])
                     #butun filtreler uygunaliyor
                     for f in range(self._cnn_filtreler[konv_katman_sayisi].agirliklar.shape[0]):
                         eleman = self._konvolusyon_islemleri.konvolusyon_islemi(x, self._filtreyi_dondur(
@@ -496,12 +508,19 @@ class cnn:
 
             #geri yayilim
             nn_ilk_katman=self._ysa.egitim(x,y,1,hata_fonksiyonu=hata_fonksiyonu,optimizer=optimizer,ogrenme_katsayisi=ogrenme_katsayisi)
+            nn_ilk_katman = nn_ilk_katman[-1]
             #print(self._ysa.katmanlar)
+            akt=aktivasyon()
+            #duzlestirme katmani deltasi,nn teki gibi
+            for i in range(len(konv_cache[-1])):#filtre sayisisi kadar
+                delta_zinciri = np.dot(nn_ilk_katman.deltalar, nn_ilk_katman.agirliklar.T)
+                ak_trv=[]
+                for j in self._duzlestirme(konv_cache[-1][i])[0]:
+                    ak_trv.append(akt.turev_uygula(konv_katmanlari_aktv_fonsiyonlari[-1],j))
+                ak_trv = np.array(ak_trv).reshape((1,-1))
+                self._cnn_deltalar[-1][i] = ak_trv * delta_zinciri
 
-            #duzlestirme katmani deltasi.nn teki gibi
-            delta_zinciri = np.dot(nn_ilk_katman.deltalar, nn_ilk_katman.agirliklar.T)
-            #self.katmanlar[j].deltalar = self._aktivasyon_fonk_turev(f_netler_cache[j + 1]) * delta_zinciri
-
+            print(1)
             #onceki deltalar konv, yardimi ile
 
     def _filtreyi_dondur(self,x):
@@ -522,6 +541,8 @@ cnn1.konvolusyon_katmani_ekle(2,(3,3),(1,1),'relu')
 cnn1.pooling_katmani_ekle((3,3),(3,3))
 cnn1.konvolusyon_katmani_ekle(3,(3,3),(1,1),'relu')
 cnn1.duzlestirme_katmani_ekle()
+cnn1.ysa_katmani_ekle(4,'sigmoid')
+cnn1.ysa_katmani_ekle(3,'sigmoid')
 cnn1.ysa_katmani_ekle(2,'sigmoid')
 cnn1.katmanlari_bas()
 import cv2
