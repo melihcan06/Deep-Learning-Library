@@ -15,7 +15,10 @@ class aktivasyon():
             return x
 
     def relu_turev(self,x):#??????????
-        return 0
+        if x<0:
+            return 0
+        else:
+            return 1
 
     def softmax(self,x,y):
         return 1
@@ -164,13 +167,13 @@ class nn:#tek katmanli nn ekle cnn in sonuna tek katman koyulmak istediginde bu 
                         self.katmanlar[j].agirliklar[t] -= np.array(ogrenme_katsayisi * turev).reshape(self.katmanlar[j].agirliklar[t].shape[0],)
                         # w -= learning rate * derivative Error total/derivative w for sgd with momentum = 0
 
-        return self.katmanlar#[0].deltalar
+        return self.katmanlar[0]#[0].deltalar
 
     # train method
     def egitim(self, girdi, cikti, epoch, batch_size=None, hata_fonksiyonu='mse', optimizer={}, ogrenme_katsayisi=0.1):
         optimizer['ad'] = 'sgd'
         optimizer['momentum'] = 0
-        self._sgd_ile_egitme(girdi, cikti, epoch, hata_fonksiyonu, ogrenme_katsayisi)
+        return self._sgd_ile_egitme(girdi, cikti, epoch, hata_fonksiyonu, ogrenme_katsayisi)
 
 class konvolusyon:
     def _zero_padding(self,grt,padding_boyutu):
@@ -402,21 +405,25 @@ class cnn:
         self._katmanlar.append(ysa_k)
 
     def _girdi_tensoru_boyutu_hesapla(self,girdi_boyutu):
+        boyutlar=[]
         cikti_boyutu=girdi_boyutu
         for i in range(len(self._katmanlar)):
             if self._katmanlar[i]['ad'].count('konv') == 1:
                 if self._katmanlar[i]['padding']==False:
                     cikti_boyutu=self._konvolusyon_islemleri.konvolusyon_sonrasi_olusacak_boyut_hesabi(
                         cikti_boyutu,self._katmanlar[i]['filtre_boyutu'],self._katmanlar[i]['kaydirma'])
+                    boyutlar.append(cikti_boyutu)
             elif self._katmanlar[i]['ad'].count('pool') == 1:
                 cikti_boyutu = self._konvolusyon_islemleri.konvolusyon_sonrasi_olusacak_boyut_hesabi(
                     cikti_boyutu,self._katmanlar[i]['filtre_boyutu'],self._katmanlar[i]['kaydirma'])
-        return cikti_boyutu
+                boyutlar.append(cikti_boyutu)
+        return boyutlar
 
     def egit(self, girdi, cikti, epoch, batch_size=None, hata_fonksiyonu='mse', optimizer={}, ogrenme_katsayisi=0.1):
         # ysa olusturuldu
-        nn_girdi_boyutu = self._girdi_tensoru_boyutu_hesapla((girdi.shape[1],girdi.shape[2]))
-        ysa_noron_sayilari = [nn_girdi_boyutu[0]*nn_girdi_boyutu[1]]
+        konv_ilerleme_boyutlari=self._girdi_tensoru_boyutu_hesapla((girdi.shape[1], girdi.shape[2]))
+        nn_girdi_boyutu = konv_ilerleme_boyutlari[-1]
+        ysa_noron_sayilari = [nn_girdi_boyutu[0] * nn_girdi_boyutu[1]]
         ysa_aktv_fonklari = []
         for i in range(len(self._katmanlar)):
             if self._katmanlar[i]['ad'].count('ysa_katman') == 1:
@@ -431,6 +438,8 @@ class cnn:
                 self._cnn_filtreler.append(
                     filtreler(self._katmanlar[i]['filtre_sayisi'], self._katmanlar[i]['filtre_boyutu']))
 
+        self._deltalar = []
+
         for tekrar in range(epoch):
             x=girdi[tekrar,:,:,:]
             y=np.array(cikti[0][tekrar]).reshape((1,1))#1xN lik vektor
@@ -438,6 +447,7 @@ class cnn:
             konv_cache = []  # konv_cache[katman][filtre_sayisi] ordaki conv sonucunu verir
             konv_cache.append([x])
             konv_katman_sayisi = 0
+            eleman=x.copy()
             for i in range(len(self._katmanlar)):
                 if self._katmanlar[i]['ad'].count('konv') == 1:
                     print("girdi")
@@ -455,7 +465,7 @@ class cnn:
                         konv_alt_cache.append(eleman)
 
                     konv_cache.append(konv_alt_cache)
-                    #cikti tensoru (filtre sayisi kadar) yani ozellik haritalari toplaniyor
+                    #cikti tensoru (filtre sayisi kadar) yani ozellik haritalari toplaniyor !!!!!yeri degisebilir!!!!!
                     x = self._tensoru_topla(np.array(konv_alt_cache).reshape((len(konv_alt_cache),eleman.shape[0],eleman.shape[1])))
                     konv_katman_sayisi += 1
                 elif self._katmanlar[i]['ad'].count('pool') == 1:
@@ -467,10 +477,15 @@ class cnn:
             #duzlestirme
             x=self._duzlestirme(x)
 
-            # geri yayilim
-            self._ysa.egitim(x,y,1,hata_fonksiyonu=hata_fonksiyonu,optimizer=optimizer,ogrenme_katsayisi=ogrenme_katsayisi)
-            print(self._ysa.katmanlar)
+            #geri yayilim
+            nn_ilk_katman=self._ysa.egitim(x,y,1,hata_fonksiyonu=hata_fonksiyonu,optimizer=optimizer,ogrenme_katsayisi=ogrenme_katsayisi)
+            #print(self._ysa.katmanlar)
 
+            #duzlestirme katmani deltasi.nn teki gibi
+            delta_zinciri = np.dot(nn_ilk_katman.deltalar, nn_ilk_katman.agirliklar.T)
+            #self.katmanlar[j].deltalar = self._aktivasyon_fonk_turev(f_netler_cache[j + 1]) * delta_zinciri
+
+            #onceki deltalar konv, yardimi ile
 
     def _filtreyi_dondur(self,x):
         return np.rot90(np.rot90(x))
