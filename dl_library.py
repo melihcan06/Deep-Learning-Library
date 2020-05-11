@@ -229,8 +229,8 @@ class konvolusyon:
         else:
             yeni=np.zeros(ksob,dtype="float32")
 
-        goruntu_boy_bitis = (kaydirma[0]*(ksob[0]-1))+1#yanlis duzelt
-        goruntu_en_bitis = (kaydirma[1]*(ksob[1]-1))+1#yanlis duzelt
+        goruntu_boy_bitis = (kaydirma[0]*(ksob[0]-1))+1
+        goruntu_en_bitis = (kaydirma[1]*(ksob[1]-1))+1
         yeni_boy_index=0
         for boy in range(0,goruntu_boy_bitis,kaydirma[0]):
             yeni_en_index=0
