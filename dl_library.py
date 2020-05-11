@@ -469,7 +469,7 @@ class cnn:
 
         for tekrar in range(epoch):
             x=girdi[tekrar,:,:,:]
-            y=np.array(cikti[0][tekrar]).reshape((1,1))#1xN lik vektor
+            y=np.array(cikti[0][tekrar]).reshape((1,-1))#1xN lik vektor
             # ileri yayilim
             konv_cache = []  # konv_cache[katman][filtre_sayisi] ordaki conv sonucunu verir
             konv_cache.append([x])
