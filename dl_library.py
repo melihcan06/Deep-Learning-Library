@@ -440,7 +440,47 @@ class cnn:
                 cikti_boyutu = self._konvolusyon_islemleri.konvolusyon_sonrasi_olusacak_boyut_hesabi(
                 cikti_boyutu, self._katmanlar[i]['filtre_boyutu'], self._katmanlar[i]['kaydirma'])
         return boyutlar
+        
+    def _model_ozeti_cikart(self,girdi_boyutu):#girdi boyutu == H,W,C
+        girdiler=[]
+        filtreler=[]
+        ciktilar=[]
+        adlar=[]
 
+        girdiler.append([girdi_boyutu[0],girdi_boyutu[1],girdi_boyutu[2]])
+        cikti_boyutu = girdi_boyutu
+
+        for i in range(len(self._katmanlar)):
+            if self._katmanlar[i]['ad'].count('konv') == 1:
+                fb = self._katmanlar[i]['filtre_boyutu']
+                fs = self._katmanlar[i]['filtre_sayisi']
+                if self._katmanlar[i]['padding'] == False:
+                    cikti_boyutu = self._konvolusyon_islemleri.konvolusyon_sonrasi_olusacak_boyut_hesabi(
+                        cikti_boyutu, fb, self._katmanlar[i]['kaydirma'])
+            elif self._katmanlar[i]['ad'].count('pool') == 1:
+                fs=girdiler[i][2]
+                fb = self._katmanlar[i]['filtre_boyutu']
+                cikti_boyutu = self._konvolusyon_islemleri.konvolusyon_sonrasi_olusacak_boyut_hesabi(
+                    cikti_boyutu, fb, self._katmanlar[i]['kaydirma'])
+            else:
+                continue
+
+            adlar.append(self._katmanlar[i]['ad'])
+            filtreler.append([fb[0], fb[1], girdiler[i][2], fs])
+            ciktilar.append([cikti_boyutu[0], cikti_boyutu[1], fs])
+            girdiler.append([cikti_boyutu[0], cikti_boyutu[1], fs])
+
+        return adlar,girdiler,filtreler,ciktilar
+
+    def model_ozeti(self,girdi_boyutu):
+        a,g,f,c=self._model_ozeti_cikart(girdi_boyutu)
+        print("")
+        print("H,W,C = girdi,cikti boyutu")
+        print("H,W,C,Filtre Sayisi = filtre boyutu")
+        print("ad" + "\t\t" + "girdi" + "\t\t" + "filtre" + "\t\t\t" + "cikti")
+        for i in range(len(f)):
+            print(a[i]+"\t"+str(g[i])+"\t"+str(f[i])+"\t"+str(c[i]))
+            
     def egit(self, girdi, cikti, epoch, batch_size=None, hata_fonksiyonu='mse', optimizer={}, ogrenme_katsayisi=0.1):
         # ysa olusturuldu
         konv_ilerleme_boyutlari = self._konv_ilerleme_boyutlari_hesapla((girdi.shape[1], girdi.shape[2]))
