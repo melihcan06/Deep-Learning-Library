@@ -383,11 +383,17 @@ class cnn:
         self._pooling_katmani_num = 1
         self._ysa_katmani_num = 1
 
-    def _tensoru_topla(self,x):
-        y=x[0,:,:]
-        for i in range(1,x.shape[0]):
-            y=np.add(y,x[i,:,:])
-        return y
+    def _tensoru_topla(self,x,cf=True):#channel first
+        if cf==True:
+            y=x[0,:,:]
+            for i in range(1,x.shape[0]):
+                y=np.add(y,x[i,:,:])
+            return y
+        else:
+            y = x[:, :, 0]
+            for i in range(1, x.shape[0]):
+                y = np.add(y, x[:, :, i])
+            return y
 
     def _rgb_topla(self,x):
         y=x[:,:,0]
@@ -518,15 +524,15 @@ class cnn:
                             eleman = self._konvolusyon_islemleri.konvolusyon_islemi(ozellik_haritalari[-1][oh], self._filtreyi_dondur(katmandaki_filtreler.agirliklar[:,:,oh,f])
                                   , self._katmanlar[i]['kaydirma'],self._katmanlar[i]['padding'],self._katmanlar[i]['aktivasyon_fonksiyonu'])
                             #except:
-                             #   print(ozellik_haritalari[-1][oh].shape,katmandaki_filtreler.agirliklar[:,:,oh,f])
-                            #  print(1)
+                               #print(ozellik_haritalari[-1][oh].shape,katmandaki_filtreler.agirliklar[:,:,oh,f])
+                               #print(1)
                             alt_ciktilar.append(eleman)
-                        filtre_ciktilari.append(alt_ciktilar)
-                    ozellik_haritalari.append(self._tensoru_topla(np.array(filtre_ciktilari)))
+                        filtre_ciktilari.append(self._tensoru_topla(np.array(alt_ciktilar)))
+                    ozellik_haritalari.append(np.array(filtre_ciktilari))
 
                     konv_katman_sayisi += 1
 
-                """elif self._katmanlar[i]['ad'].count('pool') == 1:
+                elif self._katmanlar[i]['ad'].count('pool') == 1:
                     alt_ciktilar = []
                     # katmana gelen ozellik haritasi sayisi kadar don
                     for oh in range(len(ozellik_haritalari[-1])):
@@ -534,7 +540,7 @@ class cnn:
                                                                self._katmanlar[i]['kaydirma'],
                                                                self._katmanlar[i]['yontem'])
                         alt_ciktilar.append(eleman)
-                    ozellik_haritalari.append(self._tensoru_topla(np.array(alt_ciktilar)))"""
+                    ozellik_haritalari.append(alt_ciktilar)
 
             x=self._tensoru_topla(np.array(ozellik_haritalari[-1]))
             #duzlestirme
@@ -576,7 +582,7 @@ cnn1.pooling_katmani_ekle((3,3),(3,3))
 cnn1.konvolusyon_katmani_ekle(3,(3,3),(1,1),'relu')"""
 cnn1.konvolusyon_katmani_ekle(4,(3,3),(2,2),'relu')
 cnn1.konvolusyon_katmani_ekle(2,(5,5),(1,1),'relu',padding=True)
-#cnn1.pooling_katmani_ekle((3,3),(3,3))
+cnn1.pooling_katmani_ekle((3,3),(3,3))
 cnn1.konvolusyon_katmani_ekle(3,(7,7),(1,1),'relu')
 cnn1.duzlestirme_katmani_ekle()
 cnn1.ysa_katmani_ekle(3,'sigmoid')
