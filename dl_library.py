@@ -132,7 +132,7 @@ class nn:#tek katmanli nn ekle cnn in sonuna tek katman koyulmak istediginde bu 
     # forward propagation
     def ileri_yayilim(self, girdi):  # eger katman[i]agirliklar[i] i. norondan cikana gore tutuluyorsa
         f_net = girdi
-        f_netler_cache = [f_net]
+        f_netler_cache = [f_net.copy()]#bi bak kontrol et !!!!!!!!
         for i in range(self._ara_katman_sayisi + 1):
             katm = self.katmanlar[i]
             net = np.dot(f_net, katm.agirliklar) + katm.biaslar
@@ -156,7 +156,7 @@ class nn:#tek katmanli nn ekle cnn in sonuna tek katman koyulmak istediginde bu 
                 son_katman_hatalari = self._hata_fonksiyonu_turevi_tekli(f_netler_cache[-1], c, hata_fonksiyonu)
                 aktivasyon_turevleri = self._aktivasyon_fonk_turev(f_netler_cache[-1],
                                                                    self.aktivasyon_fonksiyonlari[-1])
-                print(f_netler_cache[-1])
+                #print(f_netler_cache[-1])
                 self.katmanlar[-1].deltalar = aktivasyon_turevleri * son_katman_hatalari
 
                 # gizli katman noronlarinin deltalarini hesaplama
@@ -189,7 +189,10 @@ class konvolusyon:
     def _zero_padding(self,grt,padding_boyutu):
         #padding_boyutu is padding shape.(y pad , x pad)
         (y_pad, x_pad)=padding_boyutu
-        return np.pad(grt, ((y_pad, y_pad), (x_pad, x_pad), (0, 0)), 'constant', constant_values=0)
+        if len(grt.shape)==3:
+            return np.pad(grt, ((y_pad, y_pad), (x_pad, x_pad), (0, 0)), 'constant', constant_values=0)
+        else:
+            return np.pad(grt, ((y_pad, y_pad), (x_pad, x_pad)), 'constant', constant_values=0)
 
     def _padding(self,grt,padding_boyutu,padding_yontemi='zero'):
         #padding_boyutu=padding shape
@@ -221,24 +224,27 @@ class konvolusyon:
 
     #convolution for gray scale image
     def _konvolusyon_gri(self,grt,filtre,kaydirma=(1,1),padding=False,aktivasyon_fonksiyonu='relu',biases=None):#tam kontrol yapilmadi!!!!
-        aktv=aktivasyon()
-        #girdi=input,filtre=filter,kaydirma=stride(tuple(x,y)),if padding is True input shape = output shape
-        ksob=self.konvolusyon_sonrasi_olusacak_boyut_hesabi(grt.shape,filtre.shape, kaydirma)
-        if padding==True:
-            yeni=self.ayni_boyut_icin_padding(grt,filtre.shape,kaydirma,'zero')
+        aktv = aktivasyon()
+        # girdi=input,filtre=filter,kaydirma=stride(tuple(x,y)),if padding is True input shape = output shape
+        if padding == True:
+            ksob = grt.shape[0], grt.shape[1]
+            grt = self.ayni_boyut_icin_padding(grt, filtre.shape, kaydirma, 'zero')
         else:
-            yeni=np.zeros(ksob,dtype="float32")
-
-        goruntu_boy_bitis = (kaydirma[0]*(ksob[0]-1))+1
-        goruntu_en_bitis = (kaydirma[1]*(ksob[1]-1))+1
-        yeni_boy_index=0
-        for boy in range(0,goruntu_boy_bitis,kaydirma[0]):
-            yeni_en_index=0
-            for en in range(0,goruntu_en_bitis,kaydirma[1]):
-                deger=np.sum(np.multiply(grt[boy:boy+filtre.shape[0],en:en+filtre.shape[1]],filtre))
-                yeni[yeni_boy_index][yeni_en_index]=aktv.uygula(aktivasyon_fonksiyonu,deger)
-                yeni_en_index+=1
-            yeni_boy_index+=1
+            ksob = self.konvolusyon_sonrasi_olusacak_boyut_hesabi(grt.shape, filtre.shape, kaydirma)
+        yeni = np.zeros(ksob, dtype="float32")
+        goruntu_boy_bitis = (kaydirma[0] * (ksob[0] - 1)) + 1
+        goruntu_en_bitis = (kaydirma[1] * (ksob[1] - 1)) + 1
+        yeni_boy_index = 0
+        for boy in range(0, goruntu_boy_bitis, kaydirma[0]):
+            yeni_en_index = 0
+            for en in range(0, goruntu_en_bitis, kaydirma[1]):
+                try:
+                    deger = np.sum(np.multiply(grt[boy:boy + filtre.shape[0], en:en + filtre.shape[1]], filtre))
+                    yeni[yeni_boy_index][yeni_en_index] = aktv.uygula(aktivasyon_fonksiyonu, deger)
+                    yeni_en_index += 1
+                except:
+                    continue
+            yeni_boy_index += 1
 
         return yeni
 
@@ -362,9 +368,9 @@ class pooling:
         else:
             return self._pooling_gri(grt, filtre_boyutu, kaydirma, yontem)
 
-class filtreler:
-    def __init__(self, sayi, boyut, bias_sayisi=None):
-        self.agirliklar = np.random.random((sayi,boyut[0],boyut[1]))
+class filtreler:#kerastaki gibi H, W, onceki katman kanal sayisi, filtre sayisi
+    def __init__(self, boyut, bias_sayisi=None):
+        self.agirliklar = np.random.random((boyut[0],boyut[1],boyut[2],boyut[3]))
         #self.biaslar = np.random.random((sayi,bias_sayisi))
         #self.deltalar = np.zeros((self.biaslar.shape))
 
@@ -414,33 +420,6 @@ class cnn:
         self._ysa_katmani_num+=1
         self._katmanlar.append(ysa_k)
 
-    def _girdi_tensoru_boyutu_hesapla(self, girdi_boyutu):
-        cikti_boyutu = girdi_boyutu
-        for i in range(len(self._katmanlar)):
-            if self._katmanlar[i]['ad'].count('konv') == 1:
-                if self._katmanlar[i]['padding'] == False:
-                    cikti_boyutu = self._konvolusyon_islemleri.konvolusyon_sonrasi_olusacak_boyut_hesabi(
-                        cikti_boyutu, self._katmanlar[i]['filtre_boyutu'], self._katmanlar[i]['kaydirma'])
-
-            elif self._katmanlar[i]['ad'].count('pool') == 1:
-                cikti_boyutu = self._konvolusyon_islemleri.konvolusyon_sonrasi_olusacak_boyut_hesabi(
-                    cikti_boyutu, self._katmanlar[i]['filtre_boyutu'], self._katmanlar[i]['kaydirma'])
-        return cikti_boyutu
-
-    def _konv_ilerleme_boyutlari_hesapla(self,girdi_boyutu):
-        boyutlar=[]
-        cikti_boyutu=girdi_boyutu
-        for i in range(len(self._katmanlar)):
-            if self._katmanlar[i]['ad'].count('konv') == 1:
-                if self._katmanlar[i]['padding']==False:
-                    cikti_boyutu=self._konvolusyon_islemleri.konvolusyon_sonrasi_olusacak_boyut_hesabi(
-                        cikti_boyutu,self._katmanlar[i]['filtre_boyutu'],self._katmanlar[i]['kaydirma'])
-                    boyutlar.append(cikti_boyutu)
-            elif self._katmanlar[i]['ad'].count('pool') == 1:
-                cikti_boyutu = self._konvolusyon_islemleri.konvolusyon_sonrasi_olusacak_boyut_hesabi(
-                cikti_boyutu, self._katmanlar[i]['filtre_boyutu'], self._katmanlar[i]['kaydirma'])
-        return boyutlar
-        
     def _model_ozeti_cikart(self,girdi_boyutu):#girdi boyutu == H,W,C
         girdiler=[]
         filtreler=[]
@@ -480,11 +459,12 @@ class cnn:
         print("ad" + "\t\t" + "girdi" + "\t\t" + "filtre" + "\t\t\t" + "cikti")
         for i in range(len(f)):
             print(a[i]+"\t"+str(g[i])+"\t"+str(f[i])+"\t"+str(c[i]))
-            
+
+    #gri tonlu resimler N,H,W,1 rgb ler N,H,W,3 seklinde gelmelidir
     def egit(self, girdi, cikti, epoch, batch_size=None, hata_fonksiyonu='mse', optimizer={}, ogrenme_katsayisi=0.1):
         # ysa olusturuldu
-        konv_ilerleme_boyutlari = self._konv_ilerleme_boyutlari_hesapla((girdi.shape[1], girdi.shape[2]))
-        nn_girdi_boyutu = self._girdi_tensoru_boyutu_hesapla((girdi.shape[1], girdi.shape[2]))
+        a, g, f, c = self._model_ozeti_cikart([girdi.shape[1], girdi.shape[2],girdi.shape[3]])#duzenle
+        nn_girdi_boyutu = [c[-1][0],c[-1][1]]#hesapla
 
         ysa_noron_sayilari = [nn_girdi_boyutu[0] * nn_girdi_boyutu[1]]
         ysa_aktv_fonklari = []
@@ -498,67 +478,81 @@ class cnn:
         self._cnn_filtreler = []
         for i in range(len(self._katmanlar)):
             if self._katmanlar[i]['ad'].count('konv') == 1:
-                self._cnn_filtreler.append(
-                    filtreler(self._katmanlar[i]['filtre_sayisi'], self._katmanlar[i]['filtre_boyutu']))
+                self._cnn_filtreler.append(filtreler(f[i]))
+
+        self.model_ozeti([girdi.shape[1], girdi.shape[2],girdi.shape[3]])
 
         # cnn deltalari olustur
         self._cnn_deltalar = []
-        for i in range(len(konv_ilerleme_boyutlari)):
-            self._cnn_deltalar.append(
-                np.zeros((self._cnn_filtreler[i].agirliklar.shape[0], konv_ilerleme_boyutlari[i][0] * konv_ilerleme_boyutlari[i][1])))
+        for i in range(len(a)):
+            if a[i].count('konv') == 1:
+                self._cnn_deltalar.append(np.zeros((c[i][2],c[i][0],c[i][1])))
 
         for tekrar in range(epoch):
             x=girdi[tekrar,:,:,:]
             y=np.array(cikti[0][tekrar]).reshape((1,-1))#1xN lik vektor
+
+            #DUZELT!!!!!!!!!
             # ileri yayilim
-            konv_cache = []  # konv_cache[katman][filtre_sayisi] ordaki conv sonucunu verir
-            konv_cache.append([x])
-            konv_katman_sayisi = 0
-            eleman=x.copy()
+            konv_katman_sayisi = 0#i tum katmanlari sayiyor bize sadece konvlari sayacak eleman da lazım, filtre indexi
+            xx=x.copy()
+            if x.shape[2]==3:
+                ozellik_haritalari = [[xx[:,:,0],xx[:,:,1],xx[:,:,2]]]
+            else:
+                ozellik_haritalari = [[xx]]
             konv_katmanlari_aktv_fonsiyonlari=[]
             for i in range(len(self._katmanlar)):
                 if self._katmanlar[i]['ad'].count('konv') == 1:
-                    print("girdi")
-                    konv_alt_cache = []
                     konv_katmanlari_aktv_fonsiyonlari.append(self._katmanlar[i]['aktivasyon_fonksiyonu'])
-                    #butun filtreler uygunaliyor
-                    for f in range(self._cnn_filtreler[konv_katman_sayisi].agirliklar.shape[0]):
-                        eleman = self._konvolusyon_islemleri.konvolusyon_islemi(x, self._filtreyi_dondur(
-                            self._cnn_filtreler[konv_katman_sayisi].agirliklar[f])
-                                                                           , self._katmanlar[i]['kaydirma'],
-                                                                           self._katmanlar[i]['padding'],
-                                                                           self._katmanlar[i]['aktivasyon_fonksiyonu'])
-                        #rgb ciktiyi gray scale e donusturur
-                        if konv_katman_sayisi == 0 and len(x.shape) == 3:
-                            eleman = self._rgb_topla(eleman)
-                        konv_alt_cache.append(eleman)
 
-                    konv_cache.append(konv_alt_cache)
-                    #cikti tensoru (filtre sayisi kadar) yani ozellik haritalari toplaniyor !!!!!yeri degisebilir!!!!!
-                    x = self._tensoru_topla(np.array(konv_alt_cache).reshape((len(konv_alt_cache),eleman.shape[0],eleman.shape[1])))
+                    #butun filtreler uygunaliyor
+                    katmandaki_filtreler=self._cnn_filtreler[konv_katman_sayisi]
+
+                    filtre_ciktilari=[]
+                    #katmandaki filtre sayisi kadar don
+                    for f in range(katmandaki_filtreler.agirliklar.shape[3]):
+                        alt_ciktilar = []
+                        #katmana gelen ozellik haritasi sayisi kadar don
+                        for oh in range(katmandaki_filtreler.agirliklar.shape[2]):
+                            #try:
+                            eleman = self._konvolusyon_islemleri.konvolusyon_islemi(ozellik_haritalari[-1][oh], self._filtreyi_dondur(katmandaki_filtreler.agirliklar[:,:,oh,f])
+                                  , self._katmanlar[i]['kaydirma'],self._katmanlar[i]['padding'],self._katmanlar[i]['aktivasyon_fonksiyonu'])
+                            #except:
+                             #   print(ozellik_haritalari[-1][oh].shape,katmandaki_filtreler.agirliklar[:,:,oh,f])
+                            #  print(1)
+                            alt_ciktilar.append(eleman)
+                        filtre_ciktilari.append(alt_ciktilar)
+                    ozellik_haritalari.append(self._tensoru_topla(np.array(filtre_ciktilari)))
+
                     konv_katman_sayisi += 1
-                elif self._katmanlar[i]['ad'].count('pool') == 1:
-                    x = self._pooling_islemleri.pooling_islemi(x, self._katmanlar[i]['filtre_boyutu'],
+
+                """elif self._katmanlar[i]['ad'].count('pool') == 1:
+                    alt_ciktilar = []
+                    # katmana gelen ozellik haritasi sayisi kadar don
+                    for oh in range(len(ozellik_haritalari[-1])):
+                        eleman = self._pooling_islemleri.pooling_islemi(ozellik_haritalari[-1][oh], self._katmanlar[i]['filtre_boyutu'],
                                                                self._katmanlar[i]['kaydirma'],
                                                                self._katmanlar[i]['yontem'])
-                    # return self._konvolusyon_islemleri.ciktiyi_goruntuye_cevir(y)
+                        alt_ciktilar.append(eleman)
+                    ozellik_haritalari.append(self._tensoru_topla(np.array(alt_ciktilar)))"""
 
+            x=self._tensoru_topla(np.array(ozellik_haritalari[-1]))
             #duzlestirme
             x=self._duzlestirme(x)
 
             #geri yayilim
-            nn_ilk_katman=self._ysa.egitim(x,y,1,hata_fonksiyonu=hata_fonksiyonu,optimizer=optimizer,ogrenme_katsayisi=ogrenme_katsayisi)
-            nn_ilk_katman = nn_ilk_katman[-1]
+            nn_ilk_katman = self._ysa.egitim(x,y,1,hata_fonksiyonu=hata_fonksiyonu,optimizer=optimizer,ogrenme_katsayisi=ogrenme_katsayisi)
+            """nn_ilk_katman = nn_ilk_katman[-1]
             #print(self._ysa.katmanlar)
             akt=aktivasyon()
-            #duzlestirme katmani deltasi,nn teki gibi
+            #duzlestirme katmani deltasi,nn deki gibi
             for i in range(len(konv_cache[-1])):#filtre sayisisi kadar
                 delta_zinciri = np.dot(nn_ilk_katman.deltalar, nn_ilk_katman.agirliklar.T)
                 ak_trv=[]
                 for j in self._duzlestirme(konv_cache[-1][i])[0]:
                     ak_trv.append(akt.turev_uygula(konv_katmanlari_aktv_fonsiyonlari[-1],j))
                 ak_trv = np.array(ak_trv).reshape((1,-1))
-                self._cnn_deltalar[-1][i] = ak_trv * delta_zinciri
+                self._cnn_deltalar[-1][i] = ak_trv * delta_zinciri"""
 
             print(1)
             #onceki deltalar konv, yardimi ile
@@ -576,13 +570,17 @@ class cnn:
 
 cnn1=cnn()
 #cnn1.cnn_giris_katmani_ekle((100,100))
-cnn1.konvolusyon_katmani_ekle(2,(3,3),(1,1),'relu')
-#cnn1.konvolusyon_katmani_ekle(2,(3,3),(1,1),'relu')
+"""cnn1.konvolusyon_katmani_ekle(2,(3,3),(1,1),'relu')
+cnn1.konvolusyon_katmani_ekle(2,(3,3),(1,1),'relu',padding=True)
 cnn1.pooling_katmani_ekle((3,3),(3,3))
-cnn1.konvolusyon_katmani_ekle(3,(3,3),(1,1),'relu')
+cnn1.konvolusyon_katmani_ekle(3,(3,3),(1,1),'relu')"""
+cnn1.konvolusyon_katmani_ekle(4,(3,3),(2,2),'relu')
+cnn1.konvolusyon_katmani_ekle(2,(5,5),(1,1),'relu',padding=True)
+#cnn1.pooling_katmani_ekle((3,3),(3,3))
+cnn1.konvolusyon_katmani_ekle(3,(7,7),(1,1),'relu')
 cnn1.duzlestirme_katmani_ekle()
-cnn1.ysa_katmani_ekle(4,'sigmoid')
 cnn1.ysa_katmani_ekle(3,'sigmoid')
+cnn1.ysa_katmani_ekle(5,'sigmoid')
 cnn1.ysa_katmani_ekle(2,'sigmoid')
 cnn1.katmanlari_bas()
 import cv2
@@ -590,12 +588,6 @@ a=cv2.resize(cv2.imread("commandos.jpg"),(50,50))
 a=np.expand_dims(a,axis=0)
 b=np.array([[1]])
 cnn1.egit(a,b,1)
-"""a=cv2.imread("commandos.jpg")
-b=cnn1.deneme_methodu(a)
-cv2.imshow("1",a)
-cv2.imshow("2",b)
-cv2.waitKey(0)
-print(1)"""
 
 """a=np.array([[1,2,3,4,5],
             [6,7,8,9,10],
@@ -614,8 +606,8 @@ cikis = np.array([[0.01, 0.99]])
 ag.egitim(giris, cikis, 1, ogrenme_katsayisi=0.5)
 print(ag.ileri_yayilim(giris))"""
 
-"""ag = nn([2, 3,4,5, 2])
+"""ag = nn([2, 3, 4, 5, 2])
 giris = np.array([[0.05, 0.1]])
 cikis = np.array([[0.01, 0.99]])
-ag.egitim(giris, cikis, 1000, ogrenme_katsayisi=0.5)
+x=ag.egitim(giris, cikis, 1000, ogrenme_katsayisi=0.5)
 print(ag.ileri_yayilim(giris))"""
