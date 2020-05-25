@@ -223,7 +223,8 @@ class konvolusyon:
         return self._padding(grt,padding_boyutu,padding_yontemi)
 
     #convolution for gray scale image
-    def _konvolusyon_gri(self,grt,filtre,kaydirma=(1,1),padding=False,aktivasyon_fonksiyonu='relu',biases=None):#tam kontrol yapilmadi!!!!
+    def _konvolusyon_gri(self,grt2,filtre,kaydirma=(1,1),padding=False,aktivasyon_fonksiyonu='relu',biases=None):#tam kontrol yapilmadi!!!!
+        grt = grt2.copy()
         aktv = aktivasyon()
         # girdi=input,filtre=filter,kaydirma=stride(tuple(x,y)),if padding is True input shape = output shape
         if padding == True:
@@ -402,7 +403,7 @@ class cnn:
         return y
 
     def _duzlestirme(self,x):
-        return np.reshape(x,(1,(x.shape[0]*x.shape[1])))
+        return np.reshape(x,(1,(x.shape[0]*x.shape[1]*x.shape[2])))
 
     def konvolusyon_katmani_ekle(self,filtre_sayisi,filtre_boyutu,kaydirma,aktivasyon_fonksiyonu,padding=False):
         konv_k={'ad':'konv'+str(self._konv_katmani_num),'filtre_sayisi':filtre_sayisi,'filtre_boyutu':filtre_boyutu,'kaydirma':kaydirma,
@@ -520,12 +521,8 @@ class cnn:
                         alt_ciktilar = []
                         #katmana gelen ozellik haritasi sayisi kadar don
                         for oh in range(katmandaki_filtreler.agirliklar.shape[2]):
-                            #try:
                             eleman = self._konvolusyon_islemleri.konvolusyon_islemi(ozellik_haritalari[-1][oh], self._filtreyi_dondur(katmandaki_filtreler.agirliklar[:,:,oh,f])
                                   , self._katmanlar[i]['kaydirma'],self._katmanlar[i]['padding'],self._katmanlar[i]['aktivasyon_fonksiyonu'])
-                            #except:
-                               #print(ozellik_haritalari[-1][oh].shape,katmandaki_filtreler.agirliklar[:,:,oh,f])
-                               #print(1)
                             alt_ciktilar.append(eleman)
                         filtre_ciktilari.append(self._tensoru_topla(np.array(alt_ciktilar)))
                     ozellik_haritalari.append(np.array(filtre_ciktilari))
@@ -542,15 +539,15 @@ class cnn:
                         alt_ciktilar.append(eleman)
                     ozellik_haritalari.append(alt_ciktilar)
 
-            x=self._tensoru_topla(np.array(ozellik_haritalari[-1]))
             #duzlestirme
-            x=self._duzlestirme(x)
+            x=self._duzlestirme(np.array(ozellik_haritalari[-1]))
 
             #geri yayilim
-            nn_ilk_katman = self._ysa.egitim(x,y,1,hata_fonksiyonu=hata_fonksiyonu,optimizer=optimizer,ogrenme_katsayisi=ogrenme_katsayisi)
-            """nn_ilk_katman = nn_ilk_katman[-1]
+            #deltalari ayarlama
+
+            nn_ilk_katman = self._ysa.egitim(x,y,1,hata_fonksiyonu=hata_fonksiyonu,optimizer=optimizer,ogrenme_katsayisi=ogrenme_katsayisi)[-1]
             #print(self._ysa.katmanlar)
-            akt=aktivasyon()
+            """akt=aktivasyon()
             #duzlestirme katmani deltasi,nn deki gibi
             for i in range(len(konv_cache[-1])):#filtre sayisisi kadar
                 delta_zinciri = np.dot(nn_ilk_katman.deltalar, nn_ilk_katman.agirliklar.T)
@@ -561,7 +558,8 @@ class cnn:
                 self._cnn_deltalar[-1][i] = ak_trv * delta_zinciri"""
 
             print(1)
-            #onceki deltalar konv, yardimi ile
+            #agirliklari guncelleme
+            #
 
     def _filtreyi_dondur(self,x):
         return np.rot90(np.rot90(x))
